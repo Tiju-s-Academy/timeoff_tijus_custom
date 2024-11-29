@@ -15,8 +15,8 @@ class HrLeave(models.Model):
                     leave.request_date_from + timedelta(days=i)
                     for i in range((leave.request_date_to - leave.request_date_from).days + 1)
                 )
-                # Get non-working days (weekends and public holidays)
-                non_working_days = self.env['resource.calendar']._get_global_leaves(leave.employee_id.id)
+                # Use _get_global_attendances to fetch non-working days
+                non_working_days = self.env['resource.calendar']._get_global_attendances(leave.employee_id.id)
                 # Calculate effective leave days
                 effective_days = leave_dates - non_working_days
                 leave.number_of_days = len(effective_days)
