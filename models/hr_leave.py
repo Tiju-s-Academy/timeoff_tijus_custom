@@ -20,7 +20,7 @@ class HrLeave(models.Model):
                 # Check for weekends and holidays between leaves
                 for day in range((leave.date_to - leave.date_from).days + 1):
                     current_day = leave.date_from + timedelta(days=day)
-                    if current_day.weekday() in (5, 6) or self.env['resource.calendar.leaves'].search([('date', '=', current_day)]):
+                    if current_day.weekday() in (6) or self.env['resource.calendar.leaves'].search([('date', '=', current_day)]):
                         if not any(l.date_from <= current_day <= l.date_to for l in leaves):
                             raise ValidationError(_('Sandwich leave policy violated.'))
 
