@@ -1,39 +1,27 @@
-# -*- coding: utf-8 -*-
-from datetime import timedelta
-from odoo import models, fields
+from odoo import models, fields, api, _
+from odoo.exceptions import ValidationError
 
 class HrLeave(models.Model):
     _inherit = 'hr.leave'
 
-    sandwich_leave = fields.Boolean(string='Apply Sandwich Rule', default=True)
+    # ...existing code...
 
-    def _compute_duration(self):
-        leave_dates_cache = {}
-        non_working_days_cache = {}
-        
+    @api.constrains('date_from', 'date_to', 'employee_id')
+    def _check_sandwich_leave(self):
         for leave in self:
-            if leave.sandwich_leave:
-                leave_duration = (leave.request_date_to - leave.request_date_from).days + 1
-                leave_period = (leave.request_date_from, leave.request_date_to)
-                
-                if leave_period not in leave_dates_cache:
-                    # Get all dates in the leave period
-                    leave_dates_cache[leave_period] = set(
-                        leave.request_date_from + timedelta(days=i)
-                        for i in range((leave.request_date_to - leave.request_date_from).days + 1)
-                    )
-                
-                leave_dates = leave_dates_cache[leave_period]
-                
-                if leave_period not in non_working_days_cache:
-                    # Fetch non-working days using the employee's calendar
-                    calendar = leave.employee_id.resource_calendar_id
-                    non_working_days_cache[leave_period] = calendar._get_non_working_days(leave.request_date_from, leave.request_date_to)
-                
-                non_working_days = non_working_days_cache[leave_period]
+            if leave.holiday_status_id.sandwich_leave:
+                # Get all leaves for the employee
+                leaves = self.search([
+                    ('employee_id', '=', leave.employee_id.id),
+                    ('state', '=', 'validate'),
+                    ('date_from', '>=', leave.date_from),
+                    ('date_to', '<=', leave.date_to)
+                ])
+                # Check for weekends and holidays between leaves
+                for day in range((leave.date_to - leave.date_from).days + 1):
+                    current_day = leave.date_from + timedelta(days=day)
+                    if current_day.weekday() in (5, 6) or self.env['resource.calendar.leaves'].search([('date', '=', current_day)]):
+                        if not any(l.date_from <= current_day <= l.date_to for l in leaves):
+                            raise ValidationError(_('Sandwich leave policy violated.'))
 
-                # Calculate effective leave days
-                effective_days = leave_dates - non_working_days
-                leave.number_of_days = len(effective_days)
-            else:
-                super()._compute_duration()
+    # ...existing code...
