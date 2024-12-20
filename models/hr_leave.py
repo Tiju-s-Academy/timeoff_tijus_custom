@@ -1,6 +1,11 @@
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
 
+class HrLeaveType(models.Model):
+    _inherit = 'hr.leave.type'
+
+    sandwich_leave = fields.Boolean(string='Sandwich Leave', default=False)
+
 class HrLeave(models.Model):
     _inherit = 'hr.leave'
 
